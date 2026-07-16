@@ -1,6 +1,6 @@
  # 🤖 AI Document Assistant
 
-# 🤖 AI Document Assistant
+
 
 An AI-powered Retrieval-Augmented Generation (RAG) application that allows users to upload PDF documents and ask questions using Google Gemini.
 
