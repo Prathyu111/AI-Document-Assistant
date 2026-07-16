@@ -9,6 +9,9 @@ from utils.gemini_client import get_llm
 
 load_dotenv()
 
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 @st.cache_resource
 def build_vectorstore(text):
@@ -27,10 +30,27 @@ st.set_page_config(
 st.title("🤖 AI Document Assistant")
 st.write("Upload a PDF and ask questions about its contents.")
 
-uploaded_file = st.file_uploader(
-    "Upload a PDF",
-    type=["pdf"]
-)
+
+# Display chat history
+for message in st.session_state.messages:
+    with st.container():
+        if message["role"] == "user":
+            st.markdown(f"**👤 You:** {message['content']}")
+        else:
+            st.markdown(f"**🤖 Assistant:** {message['content']}")
+
+with st.sidebar:
+
+    st.header("📄 Document")
+
+    uploaded_file = st.file_uploader(
+        "Upload a PDF",
+        type=["pdf"]
+    )
+
+    if st.button("🗑️ Clear Chat"):
+        st.session_state.messages = []
+        st.rerun()
 
 if uploaded_file:
 
@@ -82,18 +102,39 @@ Question:
             with st.spinner("Thinking..."):
                 response = llm.invoke(prompt)
 
-            st.subheader("🤖 Answer")
+            
             if isinstance(response.content, str):
-                st.markdown(response.content)
+                answer = response.content
             else:
+                answer = ""
                 for item in response.content:
                     if isinstance(item, dict) and item.get("type") == "text":
-                        st.markdown(item["text"])
+                        answer += item["text"]
 
+            st.subheader("🤖 Answer")
+            st.markdown(answer)
+
+            # Save conversation
+            st.session_state.messages.append({
+                "role": "user",
+                "content": question
+            })
+
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer
+            })
             with st.expander("📄 Retrieved Context"):
                 st.write(context)
 
         except Exception as e:
 
             st.error("Unable to generate a response from Gemini.")
-            st.exception(e)
+            import os
+
+            if os.getenv("DEBUG") == "True":
+                st.exception(e)
+            else:
+                st.error(
+                    "Gemini is temporarily unavailable. Please try again later."
+                )
